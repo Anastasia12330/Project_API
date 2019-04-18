@@ -106,6 +106,29 @@ def handle_dialog8(res, req):
                 }
             ]
         return
+    if sessionStorage[user_id]['choice']:
+
+        if 'да' in req['request']['nlu']['tokens']:
+            res['response']['text'] = sessionStorage[user_id][
+                                          'first_name'].title() + '! Для того, чтобы выбрать \
+                    уровень сложности теста, необходимо нажать \
+                    на одну из кнопок "Легкий" или "Трудный"'
+            res['response']["tts"] = sessionStorage[user_id][
+                                         'first_name'].title() + '! Для того, чтобы выбрать \
+                    уровень сложности теста, необходимо нажать \
+                    на одну из кнопок "Легкий" или "Трудный".'
+            sessionStorage[user_id]['choice'] = False
+            res['response']['buttons'] = [
+                {
+                    'title': 'Легкий',
+                    'hide': True
+                },
+                {
+                    'title': 'Трудный',
+                    'hide': True
+                }
+            ]
+            return
 
 
 def get_first_name8(req):
