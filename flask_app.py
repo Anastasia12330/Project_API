@@ -1,6 +1,11 @@
 # импортируем библиотеки
 from flask import Flask, request
 import logging
+import random
+
+import csv
+
+import os
 
 # библиотека, которая нам понадобится для работы с JSON
 import json
@@ -130,6 +135,85 @@ def handle_dialog8(res, req):
             ]
             return
 
+    if sessionStorage[user_id]['choice_level']:
+
+        if 'легкий' in req['request']['nlu']['tokens']:
+            file_name = os.path.join('mysite', 'base1.csv')
+            sessionStorage[user_id]['question'] = open_file(file_name, 'easy')
+
+            sessionStorage[user_id]['level'] = 'easy'
+            sessionStorage[user_id]['choice_level'] = False
+
+        elif 'трудный' in req['request']['nlu']['tokens']:
+            file_name = os.path.join('mysite', 'base1.csv')
+            sessionStorage[user_id]['question'] = open_file(file_name, 'hard')
+
+            sessionStorage[user_id]['level'] = 'hard'
+            sessionStorage[user_id]['choice_level'] = False
+
+        else:
+            res['response']['text'] = sessionStorage[user_id][
+                                          'first_name'].title() + '! Ты не выбрал сложность теста!'
+
+            res['response']["tts"] = sessionStorage[user_id][
+                                         'first_name'].title() + '! Ты не выбрал сложность теста!'
+            res['response']['buttons'] = [
+                {
+                    'title': 'Легкий',
+                    'hide': True
+                },
+                {
+                    'title': 'Трудный',
+                    'hide': True
+                }
+            ]
+
+    if get_search_word(req, 'конец'):
+        # прощаемся и заканчиваем сессию (можно картинку)
+        res['response']['text'] = 'Спасибо за внимание'
+        res['response']["tts"] = 'Спасибо за внимание'
+        res['response']['card'] = {}
+        res['response']['card']['type'] = 'BigImage'
+        res['response']['card']['image_id'] = '1540737/4c57cb876e3f41f7cef2'
+        # если преждевременный выход, то показываем результат
+        if sessionStorage[user_id]['question']:
+            res['response']['card']['title'] = 'Количество вопросов : ' + \
+                                               str(sessionStorage[user_id]['answers']) + \
+                                               '\nКоличество правильных ответов : ' + \
+                                               str(sessionStorage[user_id]['right_answers']) + \
+                                               '\nКоличество не правильных ответов : ' + \
+                                               str(sessionStorage[user_id]['wrong_answers'])
+
+        sessionStorage[user_id]['bool'] = False
+        sessionStorage[user_id]['question'] = []
+        res['response']['end_session'] = True
+
+        return
+
+    if sessionStorage[user_id]['start'] is None:
+        res['response']['text'] = sessionStorage[user_id][
+                                      'first_name'].title() + \
+                                  '. Я буду показывать карту,\n а ты напишешь название объекта.\n' \
+                                  'Для завершения игры нажми Конец игры.\n' \
+                                  'Для начала игры нажми Старт'
+
+        res['response']["tts"] = sessionStorage[user_id][
+                                     'first_name'].title() + \
+                                 '. Я буду показывать карту,\n а ты напишешь название объекта.\n' \
+                                 'Для завершения игры нажми Конец игры.\n' \
+                                 'Для начала игры нажми Старт'
+        res['response']['buttons'] = [
+            {
+                'title': 'СТАРТ',
+                'hide': True
+            },
+            {
+                'title': 'Конец игры',
+                'hide': True
+            }
+        ]
+        return
+
 
 def get_first_name8(req):
     # перебираем сущности
@@ -140,3 +224,11 @@ def get_first_name8(req):
             # то возвращаем ее значение.
             # Во всех остальных случаях возвращаем None.
             return entity['value'].get('first_name', None)
+
+
+def open_file(file_name, difficulty):
+    with open(file_name) as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=';', quotechar='"')
+        events = [(x['name_object'], x['object'], x['question'], x['answer'])
+                  for x in reader if x['difficult'] == difficulty]
+    return events
